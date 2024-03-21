@@ -1,0 +1,66 @@
+ASTRA-X BASE LICENSE
+Version 1.0 — 2025
+
+Copyright © 2025
+Sri Surya Sameer Vaddhiparthy (“Author”)
+
+1. Permission Grant (Non-Commercial Use Only)
+   The Author grants you a non-exclusive, worldwide, royalty-free license to
+   use, copy, modify, merge, publish, and build upon this library and its
+   architecture solely for:
+   - Research
+   - Academic work
+   - Personal projects
+   - Internal development
+   - Non-commercial experimentation
+
+   Commercial use is NOT permitted under this license.
+
+2. Attribution Requirement
+   Any public, academic, open-source, internal showcase, derivative work, or
+   project that substantially uses this library or its architecture MUST include
+   clear and visible credit to the Author with the following statement:
+
+   “Based on the ASTRA-X Base Architecture by Sri Surya Sameer Vaddhiparthy.”
+
+   This attribution must appear in:
+   - Documentation OR
+   - README OR
+   - ‘About’ screen OR
+   - Any public-facing description of the derivative work.
+
+3. Commercial Use Restriction
+   You MAY NOT use this library, its derivatives, or its architectural patterns
+   for any commercial purpose without PRIOR WRITTEN PERMISSION from the Author.
+
+   Commercial use includes, but is not limited to:
+   - Selling software or services built using this code
+   - Integrating it into commercial products
+   - Using it for paid consulting work or client deliverables
+   - Training proprietary or paid models/agents with this codebase
+   - Offering features, APIs, or services powered by this library
+
+   To obtain commercial rights, you must contact:
+
+   Email: surya@vaddhiparthy.com
+   LinkedIn: https://www.linkedin.com/in/vaddhiparthy/
+
+4. No Redistribution Without This License
+   Redistribution of this library or any modified version MUST retain:
+   - This license text in full
+   - The copyright notice
+   - The attribution requirement
+
+5. No Warranty
+   This software is provided “AS IS”, without any warranty—express or implied—
+   including but not limited to fitness for a particular purpose, merchantability,
+   or non-infringement.
+
+   The Author shall not be liable for any claim, damages, or other liability
+   arising from the use of this library.
+
+6. Acceptance
+   By accessing, using, modifying, or building upon this library, you agree to
+   all terms of this License.
+
+END OF LICENSE
