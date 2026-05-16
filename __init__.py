@@ -1,15 +1,14 @@
-"""Top-level package for the ASTRA‑X‑BASE library.
+"""Top-level package for the semantic mixture-of-experts scaffold.
 
-This package exposes a modular, research‑grade implementation of a
-semantic‑aware mixture‑of‑experts model. The design follows the
-architecture outlined in the accompanying documentation, including:
+This package exposes a modular experimental implementation of a
+semantic-aware mixture-of-experts model. The design includes:
 
 * A lightweight base transformer backbone.
 * A semantic router comprised of a teacher and student module.
 * A dynamic clustering engine built on FAISS.
-* Expert MLP layers with split/merge capability.
+* Expert MLP layers.
 * Observability tooling for monitoring routing decisions.
-* A training loop engineered for small compute environments.
+* A compact reference training loop.
 
 Modules are organised into subpackages: ``core``, ``routing``,
 ``clustering``, ``observe``, and ``training``. See the README for

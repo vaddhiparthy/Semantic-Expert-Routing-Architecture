@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic-mixture-of-experts"
+version = "0.1.0"
+description = "PyTorch research scaffold for semantic routing in a compact mixture-of-experts language model."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Surya Vaddhiparthy" }
+]
+dependencies = []
+
+[tool.setuptools]
+package-dir = { "astra_x_base" = "." }
+packages = [
+  "astra_x_base",
+  "astra_x_base.core",
+  "astra_x_base.routing",
+  "astra_x_base.clustering",
+  "astra_x_base.observe",
+  "astra_x_base.training",
+]

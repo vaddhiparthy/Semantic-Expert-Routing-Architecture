@@ -8,8 +8,10 @@ serves as a reference implementation.
 
 from .train_loop import train
 from .configs import TrainingConfig
+from .dataloader import create_dummy_dataloader
 
 __all__ = [
     "train",
     "TrainingConfig",
+    "create_dummy_dataloader",
 ]
