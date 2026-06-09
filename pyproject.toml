@@ -11,7 +11,11 @@ requires-python = ">=3.10"
 authors = [
   { name = "Surya Vaddhiparthy" }
 ]
-dependencies = []
+dependencies = [
+  "torch>=2.2",
+  "numpy>=1.26",
+  "faiss-cpu>=1.8; platform_system != \"Windows\"",
+]
 
 [tool.setuptools]
 package-dir = { "astra_x_base" = "." }

@@ -2,6 +2,8 @@
 
 This repository contains a PyTorch research scaffold for experimenting with semantic routing in a small mixture-of-experts language-model architecture.
 
+> Note: the project is named "Semantic Mixture-of-Experts", but the importable Python package namespace is `astra_x_base` (see `import` examples below and `pyproject.toml`).
+
 ## Scope
 
 The code is a compact experimental implementation. It includes a tiny transformer backbone, MLP experts, semantic and student routers, load balancing, centroid management, observability helpers, and a reference training loop over dummy token batches.
