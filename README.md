@@ -1,5 +1,7 @@
 # Semantic Mixture-of-Experts
 
+
+**Portfolio:** [vaddhiparthy.com](https://vaddhiparthy.com/) | [Data Platforms](https://vaddhiparthy.com/data-platforms)
 This repository contains a PyTorch research scaffold for experimenting with semantic routing in a small mixture-of-experts language-model architecture.
 
 > Note: the project is named "Semantic Mixture-of-Experts", but the importable Python package namespace is `astra_x_base` (see `import` examples below and `pyproject.toml`).
