@@ -49,11 +49,10 @@ per-token expert indices, masks the flattened token batch per expert, and
 reassembles the outputs.
 
 **Observability.** `MetricsLogger` accumulates named scalar series with JSON
-export, `TraceLogger` records arbitrary per-step dictionaries, `Snapshotter`
-saves and restores model state plus centroids, and `Visualizer` reshapes both
-into plain dictionaries for an external plotting tool. Nothing in `observe` draws
-figures itself. The reference loop uses `MetricsLogger` only; the trace,
-snapshot, and visualizer helpers are standalone and must be called directly.
+export, `TraceLogger` records arbitrary per-step dictionaries, and `Snapshotter`
+saves and restores model state plus centroids. Nothing in `observe` draws
+figures. The reference loop uses `MetricsLogger` only; the trace and snapshot
+helpers are standalone and must be called directly.
 
 ## Configuration
 
@@ -134,7 +133,7 @@ python -m compileall .
 | `clustering/centroid_manager.py` | EMA centroid state |
 | `clustering/recluster.py` | K-means centroid reassignment |
 | `clustering/faiss_index.py` | FAISS index with brute-force fallback |
-| `observe/` | Metrics, traces, snapshots, plot-data preparation |
+| `observe/` | Metrics, traces, and model/centroid snapshots |
 | `training/` | `TrainingConfig`, dummy dataloader, reference `train()` |
 
 ## Limitations

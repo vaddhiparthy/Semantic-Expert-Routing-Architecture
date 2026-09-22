@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from ..core import TinyTransformer, MoELayer, ExpertMLP
+from ..core.transformer import TransformerConfig
 from ..routing import TeacherRouter, StudentRouter, HybridRouter, LoadBalancer
 from ..clustering import CentroidManager
 from ..observe import MetricsLogger
@@ -52,10 +53,7 @@ def train(
     metrics = MetricsLogger()
 
     # Build tiny transformer
-    model_cfg = TinyTransformer(
-        config=__import__("astra_x_base.core.transformer", fromlist=["TransformerConfig"]).TransformerConfig(vocab_size=vocab_size)
-    )
-    backbone = model_cfg
+    backbone = TinyTransformer(config=TransformerConfig(vocab_size=vocab_size))
 
     # Create experts
     experts = [ExpertMLP(backbone.config.d_model, 4 * backbone.config.d_model, backbone.config.d_model) for _ in range(n_experts)]
@@ -77,10 +75,8 @@ def train(
         lr=config.learning_rate,
     )
 
-    total_tokens = 0
     for step, (input_ids, target_ids) in enumerate(dataloader):
         optimizer.zero_grad()
-        total_tokens += input_ids.numel()
         # Forward through backbone
         hidden_states = backbone(input_ids)
         # Get semantic vectors for each token (use hidden_states mean as fallback)
