@@ -1,45 +1,80 @@
-# Semantic Mixture-of-Experts
+# Semantic Expert Routing Architecture
 
+A compact PyTorch research scaffold for experimenting with semantic routing in a
+mixture-of-experts language model. It contains a small transformer backbone, MLP
+experts, a teacher/student/hybrid router stack, centroid management, load
+balancing, and observability helpers, wired together by a reference training
+loop over dummy token batches.
 
-**Portfolio:** [vaddhiparthy.com](https://vaddhiparthy.com/) | [Data Platforms](https://vaddhiparthy.com/data-platforms)
-This repository contains a PyTorch research scaffold for experimenting with semantic routing in a small mixture-of-experts language-model architecture.
+The importable package namespace is `astra_x_base`; `pyproject.toml` maps it
+onto the repository root.
 
-> Note: the project is named "Semantic Mixture-of-Experts", but the importable Python package namespace is `astra_x_base` (see `import` examples below and `pyproject.toml`).
+There are no pretrained weights, no dataset pipeline, and no benchmark results
+in this repository.
 
-## Scope
-
-The code is a compact experimental implementation. It includes a tiny transformer backbone, MLP experts, semantic and student routers, load balancing, centroid management, observability helpers, and a reference training loop over dummy token batches.
-
-It is not a production inference server and does not include pretrained weights, benchmark results, or a full dataset pipeline.
-
-## Implemented Components
-
-| Area | Implementation |
-| --- | --- |
-| Backbone | `core/transformer.py` defines a small Transformer encoder |
-| Experts | `core/expert.py` and `core/moe_layer.py` define MLP experts and token dispatch |
-| Teacher router | `routing/teacher_router.py` routes by distance to semantic centroids |
-| Student router | `routing/student_router.py` predicts expert logits from hidden states |
-| Hybrid router | `routing/hybrid_router.py` blends teacher scores, student logits, and load penalties |
-| Load balancing | `routing/load_balancer.py` penalizes overloaded experts |
-| Clustering | `clustering/centroid_manager.py`, `clustering/faiss_index.py`, and `clustering/recluster.py` manage centroids and nearest-neighbor lookup |
-| Training loop | `training/train_loop.py` wires the backbone, routers, experts, and loss function together |
-| Observability | `observe/metrics.py`, `observe/trace.py`, `observe/snapshots.py`, and `observe/visualizer.py` capture training and routing state |
-
-## Architecture
+## How It Works
 
 ```text
 token ids
-  -> tiny transformer
-  -> hidden states
-  -> teacher router from semantic centroids
-  -> student router from hidden states
-  -> load penalty
-  -> hybrid routing scores
-  -> selected expert per token
-  -> expert output
-  -> language-model loss
+  -> TinyTransformer backbone            -> hidden states
+  -> TeacherRouter (distance to centroids) -> per-token expert scores
+  -> StudentRouter (learned MLP)           -> per-token expert logits
+  -> LoadBalancer (usage penalty)          -> per-expert penalty
+  -> HybridRouter (alpha blend - penalty)  -> final routing scores
+  -> MoELayer dispatch to the argmax expert
+  -> tied-embedding projection -> cross-entropy loss
 ```
+
+**Routing.** `TeacherRouter` scores each token by the negative squared distance
+from its semantic vector to every centroid and returns the top-k experts. It has
+no parameters and never updates the centroids. `StudentRouter` is a two-layer
+MLP (`Linear -> ReLU -> Linear`) that predicts expert logits from hidden states
+and is trained jointly with the rest of the model. `HybridRouter` blends the two
+with a scalar `alpha` and subtracts the load penalty; the training loop decays
+`alpha` linearly from `alpha_start` to `alpha_end` over `alpha_decay_steps`, so
+routing shifts from teacher-driven to student-driven during a run.
+
+**Load balancing.** `LoadBalancer` converts per-expert token counts into
+`beta * (usage / ideal)`, where `ideal` is total tokens divided by expert count,
+and returns zeros when no tokens have been routed.
+
+**Clustering.** `CentroidManager` holds an `(n_experts, dim)` centroid tensor
+initialised to zeros and updates it with an exponential moving average over
+assigned vectors. `reassign_centroids` runs five k-means iterations from a random
+sample for periodic re-clustering. `FaissIndex` wraps an IVF-flat FAISS index and
+falls back to brute-force PyTorch distance search when FAISS is not importable.
+
+**Experts.** `ExpertMLP` is a feedforward block; `MoELayer` takes precomputed
+per-token expert indices, masks the flattened token batch per expert, and
+reassembles the outputs.
+
+**Observability.** `MetricsLogger` accumulates named scalar series with JSON
+export, `TraceLogger` records arbitrary per-step dictionaries, `Snapshotter`
+saves and restores model state plus centroids, and `Visualizer` reshapes both
+into plain dictionaries for an external plotting tool. Nothing in `observe` draws
+figures itself. The reference loop uses `MetricsLogger` only; the trace,
+snapshot, and visualizer helpers are standalone and must be called directly.
+
+## Configuration
+
+`TrainingConfig` (`training/configs.py`) holds the hyperparameters:
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `batch_size` | `16` | Batch size for the dummy dataloader |
+| `learning_rate` | `3e-4` | Adam learning rate |
+| `num_epochs` | `1` | Epoch count |
+| `clip_grad` | `1.0` | Gradient-norm clip |
+| `alpha_start` | `1.0` | Initial teacher weight in the hybrid router |
+| `alpha_end` | `0.0` | Final teacher weight |
+| `alpha_decay_steps` | `10000` | Steps over which `alpha` decays |
+| `top_k` | `1` | Experts returned per token by the teacher router |
+| `beta` | `1.0` | Load-penalty scale |
+
+`TransformerConfig` (`core/transformer.py`) defaults to `d_model=256`,
+`n_layers=2`, `n_heads=4`, `dropout=0.1`, with feedforward width `4 * d_model`.
+The training loop constructs the backbone with these defaults and only overrides
+`vocab_size`.
 
 ## Install
 
@@ -51,12 +86,18 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-## Minimal Example
+`faiss-cpu` is declared only for non-Windows platforms. On Windows the index
+falls back to brute-force search.
+
+## Run
+
+The reference loop currently requires `top_k` to equal the number of experts
+(see Limitations). A run with four experts:
 
 ```python
 from astra_x_base.training import TrainingConfig, create_dummy_dataloader, train
 
-config = TrainingConfig(batch_size=8, num_epochs=1, top_k=1)
+config = TrainingConfig(batch_size=8, num_epochs=1, top_k=4)
 dataloader = create_dummy_dataloader(
     batch_size=8,
     seq_len=16,
@@ -67,31 +108,50 @@ metrics = train(dataloader, vocab_size=100, n_experts=4, config=config)
 print(metrics.summary())
 ```
 
-## Validation
+`create_dummy_dataloader` yields random `(input_ids, targets)` token tensors, so
+the loss value carries no meaning beyond confirming that the graph runs.
 
-Static validation:
+## Testing
+
+There is no automated test suite. The available checks are a syntax pass and the
+training smoke run above:
 
 ```powershell
 python -m compileall .
 ```
 
-Training smoke validation after installing PyTorch:
+## Repository Layout
 
-```powershell
-python - <<'PY'
-from astra_x_base.training import TrainingConfig, create_dummy_dataloader, train
+| Path | Contents |
+| --- | --- |
+| `core/transformer.py` | `TransformerConfig` and the `TinyTransformer` encoder |
+| `core/expert.py` | `ExpertMLP` feedforward expert |
+| `core/moe_layer.py` | `MoELayer` token dispatch and recombination |
+| `routing/teacher_router.py` | Centroid-distance routing |
+| `routing/student_router.py` | Learned routing MLP |
+| `routing/hybrid_router.py` | Teacher/student blend with load penalty |
+| `routing/load_balancer.py` | Per-expert usage penalty |
+| `clustering/centroid_manager.py` | EMA centroid state |
+| `clustering/recluster.py` | K-means centroid reassignment |
+| `clustering/faiss_index.py` | FAISS index with brute-force fallback |
+| `observe/` | Metrics, traces, snapshots, plot-data preparation |
+| `training/` | `TrainingConfig`, dummy dataloader, reference `train()` |
 
-config = TrainingConfig(batch_size=2, num_epochs=1, top_k=1)
-dataloader = create_dummy_dataloader(batch_size=2, seq_len=4, vocab_size=32, num_batches=1)
-metrics = train(dataloader, vocab_size=32, n_experts=2, config=config)
-print(metrics.summary())
-PY
-```
+## Limitations
 
-## Current Limits
-
-- The semantic encoder is represented by hidden states in the reference loop.
-- Expert split/merge policies are not implemented as a complete lifecycle.
-- FAISS is optional; the vector index falls back to brute-force PyTorch distance search.
-- The reference dataloader uses dummy token IDs.
-- No benchmark numbers are claimed in this repository.
+- **`top_k < n_experts` fails.** The training loop passes
+  `teacher_scores.squeeze(-1)` into `HybridRouter`. With `top_k=1` that collapses
+  to `(batch, seq)` while the student logits are `(batch, seq, n_experts)`, and
+  the blend raises a shape error. Runs only complete when `top_k == n_experts`,
+  which defeats sparse routing. This is a known defect in the reference loop, not
+  a property of the router components.
+- No semantic encoder is wired in. The loop uses the backbone hidden states
+  directly as the "semantic vectors" fed to the teacher router.
+- The centroids are created at zero and are not updated during `train()`;
+  `CentroidManager.update` and `reassign_centroids` exist but are not called from
+  the reference loop, so teacher scores are uninformative in a default run.
+- No distillation loss between the student and teacher routers is implemented,
+  despite the student router being described as learning to mimic the teacher.
+- Expert split and merge lifecycle policies are not implemented.
+- The dataloader emits random token IDs, not real text.
+- No benchmark numbers are claimed.
